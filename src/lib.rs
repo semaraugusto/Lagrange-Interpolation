@@ -35,15 +35,15 @@ impl<P: PrimeField, F: Fn(&Vec<bool>) -> P> Lagrange<P, F> {
         let one = P::from(1u8);
 
         move |input: Vec<P>| {
-            let mut chi = Vec::new();
-            for (_r, w) in w_vals.iter().enumerate() {
+            let chi = w_vals.iter().fold(Vec::new(), |mut chi, w| {
                 let mut chi_r = one;
                 for (w_i, x_i) in w.iter().zip(input.iter()) {
                     let val = if *w_i { *x_i } else { one - *x_i };
                     chi_r *= val;
                 }
                 chi.push(chi_r);
-            }
+                chi
+            });
 
             f_evals.iter().zip(chi).map(|(a, b)| *a * b).sum::<P>()
         }
