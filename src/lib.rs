@@ -2,14 +2,7 @@
 // TODO: Change prime field from bls12 to F_5
 // use ark_bls12_381::Fr;
 use ark_ff::PrimeField;
-use ark_ff::{fields::Fp64, MontBackend, MontConfig};
 use itertools::Itertools;
-
-#[derive(MontConfig)]
-#[modulus = "5"]
-#[generator = "3"]
-pub struct FqConfig;
-pub type Fq = Fp64<MontBackend<FqConfig, 1>>;
 
 struct Lagrange<P: PrimeField, F: Fn(&Vec<bool>) -> P> {
     func: F,
@@ -87,13 +80,6 @@ fn f<P: PrimeField>(x: &Vec<bool>) -> P {
         (1, 1) => 4,
         _ => panic!(),
     } as u32)
-}
-
-fn main() {
-    let lagrange = Lagrange::new(f, 2);
-    let f_tilde = lagrange.slow_interpolate();
-    let res = f_tilde(vec![Fq::from(1u8), Fq::from(1u8)]);
-    println!("{:?}", res);
 }
 
 #[cfg(test)]
