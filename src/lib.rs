@@ -30,10 +30,11 @@ impl<P: PrimeField, F: Fn(&Vec<bool>) -> P> Lagrange<P, F> {
             f_evals.iter().zip(chi).map(|(a, b)| *a * b).sum::<P>()
         }
     }
+    // pretty sure this is not optimized yet and is just a rewritten version of the above function
     fn interpolate(&self) -> impl Fn(Vec<P>) -> P {
         let (w_vals, f_evals) = self.get_inputs_and_evaluations();
         let one = P::from(1u8);
-
+        let mut num_mult = 0;
         move |input: Vec<P>| {
             let chi = w_vals.iter().fold(Vec::new(), |mut chi, w| {
                 let mut chi_r = one;
