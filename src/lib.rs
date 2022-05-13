@@ -62,13 +62,6 @@ impl<P: PrimeField, F: Fn(&Vec<bool>) -> P> Lagrange<P, F> {
         (w_vals, f_evals)
     }
 }
-// fn build_chi_table<P: PrimeField>() -> Vec<P> {
-//     todo!()
-// }
-
-// TODO: Efficient Lagrange interpolation algorithm (Lemma 3.8)
-#[allow(dead_code)]
-fn lagrange_efficient() {}
 
 // Function f mapping {0,1}^2 to prime field F_5 (see Figure 3.1)
 fn f<P: PrimeField>(x: &Vec<bool>) -> P {
@@ -140,44 +133,11 @@ mod tests {
                 "incorrect evaluation of multilinear extension f_tilde"
             );
         }
-        // assert_eq!(true, false);
     }
     #[test]
     fn test_fast() {
         for x in (0..2).map(|_| (0..5)).multi_cartesian_product() {
             let a = test_func(x[0], x[1]);
-            let a = Fq::from(match (x[0], x[1]) {
-                (0, 0) => 1,
-                (0, 1) => 2,
-                (0, 2) => 3,
-                (0, 3) => 4,
-                (0, 4) => 5,
-
-                (1, 0) => 1,
-                (1, 1) => 4,
-                (1, 2) => 2,
-                (1, 3) => 0,
-                (1, 4) => 3,
-
-                (2, 0) => 1,
-                (2, 1) => 1,
-                (2, 2) => 1,
-                (2, 3) => 1,
-                (2, 4) => 1,
-
-                (3, 0) => 1,
-                (3, 1) => 3,
-                (3, 2) => 0,
-                (3, 3) => 2,
-                (3, 4) => 4,
-
-                (4, 0) => 1,
-                (4, 1) => 0,
-                (4, 2) => 4,
-                (4, 3) => 3,
-                (4, 4) => 2,
-                _ => panic!(),
-            } as u32);
             let lagrange = Lagrange::new(f, 2);
             let f_tilde = lagrange.interpolate();
             let b = f_tilde(vec![Fq::from(x[0]), Fq::from(x[1])]);
@@ -187,6 +147,5 @@ mod tests {
                 "incorrect evaluation of multilinear extension f_tilde"
             );
         }
-        // assert_eq!(true, false);
     }
 }
