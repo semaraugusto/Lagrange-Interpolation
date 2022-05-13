@@ -3,7 +3,6 @@
 // use ark_bls12_381::Fr;
 use ark_ff::PrimeField;
 use ark_ff::{fields::Fp64, MontBackend, MontConfig};
-use ark_std::collections::HashMap;
 use itertools::Itertools;
 
 #[derive(MontConfig)]
@@ -44,7 +43,7 @@ impl<P: PrimeField, F: Fn(&Vec<bool>) -> P> Lagrange<P, F> {
 
         move |input: Vec<P>| {
             let mut chi = Vec::new();
-            for (r, w) in w_vals.iter().enumerate() {
+            for (_r, w) in w_vals.iter().enumerate() {
                 let mut chi_r = one;
                 for (w_i, x_i) in w.iter().zip(input.iter()) {
                     let val = if *w_i { *x_i } else { one - *x_i };
@@ -108,41 +107,44 @@ mod tests {
     pub struct FqConfig;
     pub type Fq = Fp64<MontBackend<FqConfig, 1>>;
 
+    fn test_func(a: u32, b: u32) -> Fq {
+        Fq::from(match (a, b) {
+            (0, 0) => 1,
+            (0, 1) => 2,
+            (0, 2) => 3,
+            (0, 3) => 4,
+            (0, 4) => 5,
+
+            (1, 0) => 1,
+            (1, 1) => 4,
+            (1, 2) => 2,
+            (1, 3) => 0,
+            (1, 4) => 3,
+
+            (2, 0) => 1,
+            (2, 1) => 1,
+            (2, 2) => 1,
+            (2, 3) => 1,
+            (2, 4) => 1,
+
+            (3, 0) => 1,
+            (3, 1) => 3,
+            (3, 2) => 0,
+            (3, 3) => 2,
+            (3, 4) => 4,
+
+            (4, 0) => 1,
+            (4, 1) => 0,
+            (4, 2) => 4,
+            (4, 3) => 3,
+            (4, 4) => 2,
+            _ => panic!(),
+        } as u32)
+    }
     #[test]
     fn test_slow() {
         for x in (0..2).map(|_| (0..5)).multi_cartesian_product() {
-            let a = Fq::from(match (x[0], x[1]) {
-                (0, 0) => 1,
-                (0, 1) => 2,
-                (0, 2) => 3,
-                (0, 3) => 4,
-                (0, 4) => 5,
-
-                (1, 0) => 1,
-                (1, 1) => 4,
-                (1, 2) => 2,
-                (1, 3) => 0,
-                (1, 4) => 3,
-
-                (2, 0) => 1,
-                (2, 1) => 1,
-                (2, 2) => 1,
-                (2, 3) => 1,
-                (2, 4) => 1,
-
-                (3, 0) => 1,
-                (3, 1) => 3,
-                (3, 2) => 0,
-                (3, 3) => 2,
-                (3, 4) => 4,
-
-                (4, 0) => 1,
-                (4, 1) => 0,
-                (4, 2) => 4,
-                (4, 3) => 3,
-                (4, 4) => 2,
-                _ => panic!(),
-            } as u32);
+            let a = test_func(x[0], x[1]);
             let lagrange = Lagrange::new(f, 2);
             let f_tilde = lagrange.slow_interpolate();
             let b = f_tilde(vec![Fq::from(x[0]), Fq::from(x[1])]);
@@ -157,6 +159,7 @@ mod tests {
     #[test]
     fn test_fast() {
         for x in (0..2).map(|_| (0..5)).multi_cartesian_product() {
+            let a = test_func(x[0], x[1]);
             let a = Fq::from(match (x[0], x[1]) {
                 (0, 0) => 1,
                 (0, 1) => 2,
