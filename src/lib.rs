@@ -3,6 +3,7 @@
 // use ark_bls12_381::Fr;
 use ark_ff::PrimeField;
 use ark_ff::{fields::Fp64, MontBackend, MontConfig};
+use ark_std::collections::HashMap;
 use itertools::Itertools;
 
 #[derive(MontConfig)]
@@ -22,7 +23,7 @@ impl<P: PrimeField, F: Fn(&Vec<bool>) -> P> Lagrange<P, F> {
     }
 
     fn slow_interpolate(&self) -> impl Fn(Vec<P>) -> P {
-        let (w_vals, f_evals) = self.build_table();
+        let (w_vals, f_evals) = self.get_inputs_and_evaluations();
         let one = P::from(1u8);
 
         move |input: Vec<P>| {
@@ -37,8 +38,26 @@ impl<P: PrimeField, F: Fn(&Vec<bool>) -> P> Lagrange<P, F> {
             f_evals.iter().zip(chi).map(|(a, b)| *a * b).sum::<P>()
         }
     }
+    fn interpolate(&self) -> impl Fn(Vec<P>) -> P {
+        let (w_vals, f_evals) = self.get_inputs_and_evaluations();
+        let one = P::from(1u8);
 
-    fn build_table(&self) -> (Vec<Vec<bool>>, Vec<P>) {
+        move |input: Vec<P>| {
+            let mut chi = Vec::new();
+            for (r, w) in w_vals.iter().enumerate() {
+                let mut chi_r = one;
+                for (w_i, x_i) in w.iter().zip(input.iter()) {
+                    let val = if *w_i { *x_i } else { one - *x_i };
+                    chi_r *= val;
+                }
+                chi.push(chi_r);
+            }
+
+            f_evals.iter().zip(chi).map(|(a, b)| *a * b).sum::<P>()
+        }
+    }
+
+    fn get_inputs_and_evaluations(&self) -> (Vec<Vec<bool>>, Vec<P>) {
         let mut w_vals = Vec::new();
         let mut f_evals = Vec::new();
         for w in (0..self.domain)
@@ -51,6 +70,9 @@ impl<P: PrimeField, F: Fn(&Vec<bool>) -> P> Lagrange<P, F> {
         (w_vals, f_evals)
     }
 }
+// fn build_chi_table<P: PrimeField>() -> Vec<P> {
+//     todo!()
+// }
 
 // TODO: Efficient Lagrange interpolation algorithm (Lemma 3.8)
 #[allow(dead_code)]
@@ -87,7 +109,7 @@ mod tests {
     pub type Fq = Fp64<MontBackend<FqConfig, 1>>;
 
     #[test]
-    fn test_example_f() {
+    fn test_slow() {
         for x in (0..2).map(|_| (0..5)).multi_cartesian_product() {
             let a = Fq::from(match (x[0], x[1]) {
                 (0, 0) => 1,
@@ -123,6 +145,52 @@ mod tests {
             } as u32);
             let lagrange = Lagrange::new(f, 2);
             let f_tilde = lagrange.slow_interpolate();
+            let b = f_tilde(vec![Fq::from(x[0]), Fq::from(x[1])]);
+            println!("{x:?}{a:?} {b:?}");
+            assert_eq!(
+                a, b,
+                "incorrect evaluation of multilinear extension f_tilde"
+            );
+        }
+        // assert_eq!(true, false);
+    }
+    #[test]
+    fn test_fast() {
+        for x in (0..2).map(|_| (0..5)).multi_cartesian_product() {
+            let a = Fq::from(match (x[0], x[1]) {
+                (0, 0) => 1,
+                (0, 1) => 2,
+                (0, 2) => 3,
+                (0, 3) => 4,
+                (0, 4) => 5,
+
+                (1, 0) => 1,
+                (1, 1) => 4,
+                (1, 2) => 2,
+                (1, 3) => 0,
+                (1, 4) => 3,
+
+                (2, 0) => 1,
+                (2, 1) => 1,
+                (2, 2) => 1,
+                (2, 3) => 1,
+                (2, 4) => 1,
+
+                (3, 0) => 1,
+                (3, 1) => 3,
+                (3, 2) => 0,
+                (3, 3) => 2,
+                (3, 4) => 4,
+
+                (4, 0) => 1,
+                (4, 1) => 0,
+                (4, 2) => 4,
+                (4, 3) => 3,
+                (4, 4) => 2,
+                _ => panic!(),
+            } as u32);
+            let lagrange = Lagrange::new(f, 2);
+            let f_tilde = lagrange.interpolate();
             let b = f_tilde(vec![Fq::from(x[0]), Fq::from(x[1])]);
             println!("{x:?}{a:?} {b:?}");
             assert_eq!(
